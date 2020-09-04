@@ -791,8 +791,11 @@ synthetic[] public Synthetics;
         
         // Pushes Government Token to Synthetics Array, sets $5 exchange rate, 1000% collateralizationRate and sets governmentToken flag to true or 1
         synthetic memory gt = synthetic(govToken, 500, 10, 1);
+        synthetic memory one = synthetic(ONEBase, 1, 10, 0);
         Synthetics.push(gt);
+        Synthetics.push(one);
         owners.push(msg.sender);
+        initialized = true;
     }
 
     modifier authorized (){
@@ -857,16 +860,16 @@ synthetic[] public Synthetics;
 
     function lockToken(address synth, uint amount) public payable {
         require(msg.value > 0 || amount > 0, "Must deposit an asset");
-        require(msg.value > 0 && amount == 0, "Must deposit only one asset at a time");
-        require(msg.value == 0 && amount > 0, "Must deposit only one asset at a time");
 
         //Lock ONE
         if(msg.value > 0){
              issueSynths(synth, msg.sender, getCollaterizationTotal(ONEBase, synth, msg.value));
+             SynthIssued(msg.sender, synth, getCollaterizationTotal(ONEBase, synth, msg.value));
         } else {
             //Lock HRC20 Governance Token
             ERC20(getGovernanceAddress()).transfer(address(this), amount);
             issueSynths(synth, msg.sender, getCollaterizationTotal(getGovernanceAddress(), synth, amount));
+            SynthIssued(msg.sender, synth, getCollaterizationTotal(getGovernanceAddress(), synth, msg.value));
         }
     }
     
