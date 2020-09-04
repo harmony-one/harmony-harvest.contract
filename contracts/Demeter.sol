@@ -739,56 +739,120 @@ abstract contract ERC20Mintable is Context, ERC20 {
 
 contract Demeter {
     using SafeMath for uint256;
-constructor () public {
-    owner = msg.sender;
-}
+constructor () public {}
+
+//Events
+event Initialized(bool initialized);
+
+event TokenUnlocked(
+    address account,
+    address asset,
+    uint amount
+    );
+
+event TokenLocked(
+    address account,
+    address asset,
+    uint amount
+    );
+    
+event SynthIssued(
+    address account,
+    address asset,
+    uint amount
+    );
+    
+event SynthBurned(
+    address account,
+    address asset,
+    uint amount
+    );
 
 bool initialized;
-address owner;
-address governanceToken;
-address USDToken;
+address[] owners;
+address ONEBase = 0x0000000000000000000000000000000000000000;
 
-address[] public Synthetics;
-mapping(address => uint256) public exchangePrices;
-mapping(address => mapping(address => uint256)) public lockedLiquidity;
-mapping(address => uint256) public collateralizationRates;
+struct synthetic {
+    address tokenAddress;
+    uint exchangePrice;
+    uint collateralizationRate;
+    uint governanceToken;
+}
 
-    function initialize(address govToken, address getusdToken) public {
+struct order {
+    uint sendingAmount;
+    uint receivingAmount;
+}
+
+synthetic[] public Synthetics;
+
+    function initialize(address govToken) public {
         require(initialized == false, "Already initialized");
-
-        governanceToken = govToken;
-        USDToken = getusdToken;
-        owner = msg.sender;
+        
+        // Pushes Government Token to Synthetics Array, sets $5 exchange rate, 1000% collateralizationRate and sets governmentToken flag to true or 1
+        synthetic memory gt = synthetic(govToken, 500, 10, 1);
+        Synthetics.push(gt);
+        owners.push(msg.sender);
     }
 
     modifier authorized (){
-        require(owner == msg.sender || msg.sender == address(this), "Not Authorized.");
+        require(isOwner() || msg.sender == address(this), "Not Authorized.");
         _;
+    }
+    
+    function addOwner(address owner) public authorized {
+        owners.push(owner);
+    }
+    
+    function isOwner() public view returns (bool) {
+        for(uint x = 0; x < owners.length; x++){
+            if(owners[x] == msg.sender){
+                return true;
+            } else {
+                return false;
+            }
+        }
     }
 
     function setExchangePrice(address asset, uint price) public authorized {
-        exchangePrices[asset] = price;
+        for(uint x = 0; x < Synthetics.length; x++){
+            if(Synthetics[x].tokenAddress == asset){
+                Synthetics[x].exchangePrice = price;
+            }
+            }
     }
 
     function getExchangePrice(address asset) public view returns (uint){
-        return exchangePrices[asset];
+                for(uint x = 0; x < Synthetics.length; x++){
+            if(Synthetics[x].tokenAddress == asset){
+                return Synthetics[x].exchangePrice;
+            }
+            }
     }
 
-    function getCollaterizationTotal(address asset, uint amount) public view returns (uint){
-        uint collateralizationRate = collateralizationRates[asset];
-        uint exchangeRate = exchangePrices[asset];
-
-        uint collateralizationTotal = amount.mul(collateralizationRate);
-
-        return collateralizationTotal;
+    function getCollaterizationTotal(address depositedAsset, address receivedAsset, uint amount) public view returns (uint){
+        synthetic memory base = getSynth(depositedAsset);
+        synthetic memory receiving = getSynth(receivedAsset);
+        uint collateralizationTotal = amount.div(base.collateralizationRate);
+        uint receivingAssetTotal = collateralizationTotal.mul(base.exchangePrice).div(receiving.exchangePrice);
+        
+        return receivingAssetTotal;
     }
 
-    function exchangeAsset(address asset, address exchangedAsset) public payable {
-
+    function setGovernanceAddress(address govAddress) public authorized {
+                for(uint x = 0; x < Synthetics.length; x++){
+            if(Synthetics[x].governanceToken == 1){
+                 Synthetics[x].tokenAddress = govAddress;
+            }
+        }
     }
-
-    function setGovernanceAddress(address govAddress) public authorized{
-        governanceToken = govAddress;
+    
+    function getGovernanceAddress() public view returns (address){
+                      for(uint x = 0; x < Synthetics.length; x++){
+            if(Synthetics[x].governanceToken == 1){
+                 return Synthetics[x].tokenAddress;
+            }
+        }
     }
 
     function lockToken(address synth, uint amount) public payable {
@@ -798,37 +862,58 @@ mapping(address => uint256) public collateralizationRates;
 
         //Lock ONE
         if(msg.value > 0){
-             lockedLiquidity[msg.sender][governanceToken] = msg.value;
+             issueSynths(synth, msg.sender, getCollaterizationTotal(ONEBase, synth, msg.value));
         } else {
-            //Lock HRC20
-            ERC20(governanceToken).transfer(address(this), amount);
-            lockedLiquidity[msg.sender][governanceToken] = amount;
-
-            issueSynths(synth, msg.sender, getCollaterizationTotal(synth, amount));
+            //Lock HRC20 Governance Token
+            ERC20(getGovernanceAddress()).transfer(address(this), amount);
+            issueSynths(synth, msg.sender, getCollaterizationTotal(getGovernanceAddress(), synth, amount));
+        }
+    }
+    
+    function getSynth(address asset) public view returns (synthetic memory){
+        for(uint x = 0; x < Synthetics.length; x++){
+            if(Synthetics[x].tokenAddress == asset && Synthetics[x].governanceToken == 0){
+                return Synthetics[x];
+            }
+        }
+    }
+    
+    function returnBalance(address asset) public view returns (uint){
+        require(asset != address(0x0), "Enter asset address");
+        if(asset == ONEBase){
+            return address(this).balance;
+        } else {
+            return ERC20(asset).balanceOf(address(this));
         }
     }
 
-
-    function unlockToken(address asset, uint amount) public payable {
+    function unlockToken(address asset, address returnAsset, uint amount) public payable {
         require(msg.value > 0 || amount > 0, "Must deposit an asset");
         require(msg.value > 0 && amount == 0, "Must deposit only one asset at a time");
         require(msg.value == 0 && amount > 0, "Must deposit only one asset at a time");
-                //Unlock ONE
-        if(msg.value > 0){
+        require(returnAsset != address(0x0), "Must have return asset specified");
+                //Unlock ONE or Governance Token
 
-        } else {
-            //Unlock HRC20
+                uint returnValue = getCollaterizationTotal(asset, returnAsset, amount);
+                
+            if(asset == ONEBase){
+                require(returnBalance(ONEBase) > returnValue, "Not enough in contract");
+            } else {
+                require(returnBalance(asset) > returnValue, "Not enough in contract");
+            }
+            
 
-        }
     }
 
-    function addAsset(address asset) public authorized {
-        Synthetics.push(asset);
+    function addAsset(address asset, uint collateralizationRate, uint exchangePrice, uint govToken) public authorized {
+        require(govToken == 1 || govToken == 0, "govToken parameters only take 0 or 1.");
+        synthetic memory synth = synthetic(asset, exchangePrice, collateralizationRate, govToken);
+        Synthetics.push(synth);
     }
 
-    function removeAsset(address asset) public {
+    function removeAsset(address asset) public authorized {
                 for(uint x; x < Synthetics.length; x++){
-            if(Synthetics[x] == asset){
+            if(Synthetics[x].tokenAddress == asset){
                 Synthetics[x] = Synthetics[Synthetics.length -1];
                 delete Synthetics[Synthetics.length - 1];
                 Synthetics.pop();
@@ -836,12 +921,14 @@ mapping(address => uint256) public collateralizationRates;
         }
     }
 
-    function issueSynths(address asset, address receiver, uint amount) public authorized {
+    function issueSynths(address asset, address receiver, uint amount) internal {
         ERC20Mintable(asset).mint(receiver, amount);
+        emit SynthIssued(receiver, asset, amount);
     }
 
-    function burnSynths(address asset, address receiver, uint amount) public authorized {
+    function burnSynths(address asset, address receiver, uint amount) internal {
         ERC20Burnable(asset).burnFrom(receiver, amount);
+        emit SynthBurned(receiver, asset, amount);
     }
 
 }
