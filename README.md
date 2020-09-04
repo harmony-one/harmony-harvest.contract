@@ -17,9 +17,16 @@ Build contracts
 truffle build
 ```
 
+## Deploy
+
+Deploy, init and configuring all contracts
+```
+node ./scripts/fullDeploy.js
+```
+
 ## Tests
 
-Run End2End test
+Deploy and run End2End test
 ```
 node ./scripts/end2end.js
 ```
