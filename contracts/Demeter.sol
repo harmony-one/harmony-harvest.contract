@@ -755,7 +755,8 @@ mapping(address => uint256) public collateralizationRates;
 
     function initialize(address govToken, address getusdToken) public {
         require(initialized == false, "Already initialized");
-        govToken = governanceToken;
+
+        governanceToken = govToken;
         USDToken = getusdToken;
         owner = msg.sender;
     }
@@ -776,7 +777,9 @@ mapping(address => uint256) public collateralizationRates;
     function getCollaterizationTotal(address asset, uint amount) public view returns (uint){
         uint collateralizationRate = collateralizationRates[asset];
         uint exchangeRate = exchangePrices[asset];
+
         uint collateralizationTotal = amount.mul(collateralizationRate);
+
         return collateralizationTotal;
     }
 
@@ -795,12 +798,13 @@ mapping(address => uint256) public collateralizationRates;
 
         //Lock ONE
         if(msg.value > 0){
-             lockedLiquidity[msg.sender][governanceAddress] = msg.value;
+             lockedLiquidity[msg.sender][governanceToken] = msg.value;
         } else {
             //Lock HRC20
-            ERC20(governanceAddress).transfer(address(this), amount);
-            lockedLiquidity[msg.sender][governanceAddress] = amount;
-            issueSynths(synth, msg.sender, getCollaterizationTotal());
+            ERC20(governanceToken).transfer(address(this), amount);
+            lockedLiquidity[msg.sender][governanceToken] = amount;
+
+            issueSynths(synth, msg.sender, getCollaterizationTotal(synth, amount));
         }
     }
 

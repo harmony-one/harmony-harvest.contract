@@ -2,6 +2,11 @@
 
 ## Setup
 
+Create ENV
+```
+mv .env.test .env
+```
+
 Install packages
 ```
 npm i
@@ -12,16 +17,11 @@ Build contracts
 truffle build
 ```
 
-Deploy contracts
-```
-node ./scripts/deploy.js
-```
-
 ## Tests
 
-Run Mint test
+Run End2End test
 ```
-node ./scripts/mint-test.js
+node ./scripts/end2end.js
 ```
 
 ## Test Accounts: 
