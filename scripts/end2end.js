@@ -1,37 +1,37 @@
 require("dotenv").config();
-const {deployDemeterContract, initDemeterContract} = require("./deploy");
-const {setExchangePrice} = require("./mint");
-const {hmy, options} = require("./hmy");
-
-const erc20Json = require("../build/contracts/ERC20.json");
-
-const usdContract = hmy.contracts.createContract(erc20Json.abi, process.env.USD_TOKEN_ADDRESS);
-usdContract.wallet.addByPrivateKey(process.env.USER_PRIVATE_KEY);
-const govContract = hmy.contracts.createContract(erc20Json.abi, process.env.GOV_TOKEN_ADDRESS);
-govContract.wallet.addByPrivateKey(process.env.USER_PRIVATE_KEY);
+const {deployDemeterContract, initDemeterContract, addAsset, deployToken, setTokenGrantRole} = require("./deploy");
+const {lockToken} = require("./mint");
+const {getTokenBalance} = require("./balances");
+const {hmy} = require("./hmy");
 
 async function end2end() {
-    console.log('---- before issueSynths ----')
-
-    let res = await usdContract.methods.balanceOf(process.env.USER_ADDRESS).call(options);
-    console.log('hUSD balance: ' + Number(res));
-
-    res = await govContract.methods.balanceOf(process.env.USER_ADDRESS).call(options);
-    console.log('1HRV balance: ' + Number(res));
-
+    const govContractAddr = await deployToken('1HRV', '1HRV');
+    const usdContractAddr = await deployToken('hUSD', 'hUSD');
     console.log('-----')
-
     const contractAddr = await deployDemeterContract();
-
     console.log('-----')
-
-    await initDemeterContract(contractAddr, process.env.GOV_TOKEN_ADDRESS, process.env.USD_TOKEN_ADDRESS);
-
+    await setTokenGrantRole(govContractAddr, contractAddr);
+    await setTokenGrantRole(usdContractAddr, contractAddr);
     console.log('-----')
-
-    await setExchangePrice(contractAddr, process.env.USD_TOKEN_ADDRESS, '0x22');
-
+    await initDemeterContract(contractAddr, govContractAddr);
     console.log('-----')
+    await addAsset(contractAddr, usdContractAddr, 10, 100);
+    console.log('-----')
+    console.log('--- DEPLOY FINISH ---')
+
+    let res = await hmy.blockchain.getBalance({ address: process.env.USER_ADDRESS });
+    console.log('User balance before: ' + Number(res.result) / 1e18)
+
+    res = await getTokenBalance(usdContractAddr, process.env.USER_ADDRESS);
+    console.log('sUSD balance before: ' + Number(res));
+
+    await lockToken(contractAddr, usdContractAddr, 1000);
+
+    res = await hmy.blockchain.getBalance({ address: process.env.USER_ADDRESS });
+    console.log('User balance after: ' + Number(res.result) / 1e18)
+
+    res = await getTokenBalance(usdContractAddr, process.env.USER_ADDRESS);
+    console.log('sUSD balance after: ' + Number(res));
 
     process.exit();
 }
