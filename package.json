@@ -1,7 +1,7 @@
 {
-  "name": "ethhmy-bridge",
+  "name": "harmony-harvest.contract",
   "version": "0.0.1",
-  "description": "ethereum harmony two-way bridge",
+  "description": "ethereum harmony harvest contract",
   "license": "MIT",
   "dependencies": {
     "@openzeppelin/contracts": "^2.5.1",
