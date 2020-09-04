@@ -833,7 +833,7 @@ synthetic[] public Synthetics;
             }
     }
 
-    function getCollaterizationTotal(address depositedAsset, address receivedAsset, uint amount) public view returns (uint){
+    function getCollateralizationTotal(address depositedAsset, address receivedAsset, uint amount) public view returns (uint){
         synthetic memory base = getSynth(depositedAsset);
         synthetic memory receiving = getSynth(receivedAsset);
         uint collateralizationTotal = amount.div(base.collateralizationRate);
@@ -863,13 +863,13 @@ synthetic[] public Synthetics;
 
         //Lock ONE
         if(msg.value > 0){
-             issueSynths(synth, msg.sender, getCollaterizationTotal(ONEBase, synth, msg.value));
-             SynthIssued(msg.sender, synth, getCollaterizationTotal(ONEBase, synth, msg.value));
+             issueSynths(synth, msg.sender, getCollateralizationTotal(ONEBase, synth, msg.value));
+             SynthIssued(msg.sender, synth, getCollateralizationTotal(ONEBase, synth, msg.value));
         } else {
             //Lock HRC20 Governance Token
             ERC20(getGovernanceAddress()).transfer(address(this), amount);
-            issueSynths(synth, msg.sender, getCollaterizationTotal(getGovernanceAddress(), synth, amount));
-            SynthIssued(msg.sender, synth, getCollaterizationTotal(getGovernanceAddress(), synth, msg.value));
+            issueSynths(synth, msg.sender, getCollateralizationTotal(getGovernanceAddress(), synth, amount));
+            SynthIssued(msg.sender, synth, getCollateralizationTotal(getGovernanceAddress(), synth, msg.value));
         }
     }
     
@@ -892,17 +892,19 @@ synthetic[] public Synthetics;
 
     function unlockToken(address asset, address returnAsset, uint amount) public payable {
         require(msg.value > 0 || amount > 0, "Must deposit an asset");
-        require(msg.value > 0 && amount == 0, "Must deposit only one asset at a time");
-        require(msg.value == 0 && amount > 0, "Must deposit only one asset at a time");
         require(returnAsset != address(0x0), "Must have return asset specified");
                 //Unlock ONE or Governance Token
 
-                uint returnValue = getCollaterizationTotal(asset, returnAsset, amount);
+                uint returnValue = getCollateralizationTotal(asset, returnAsset, amount);
                 
             if(asset == ONEBase){
                 require(returnBalance(ONEBase) > returnValue, "Not enough in contract");
+                burnSynths(asset, msg.sender, amount);
+                msg.sender.transfer(returnValue);
             } else {
                 require(returnBalance(asset) > returnValue, "Not enough in contract");
+                burnSynths(asset, msg.sender, amount);
+                ERC20(returnAsset).transfer(msg.sender, returnValue);
             }
             
 
