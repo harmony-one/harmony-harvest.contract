@@ -24,7 +24,7 @@ async function setExchangePrice(contractAddr, usdToken, amount) {
     console.log("sUSD exchange price: " + Number(response));
 }
 
-async function lockToken(contractAddr, usdToken, amount) {
+async function lockTokenByOne(contractAddr, usdToken, amount) {
     const demetraJson = require("../build/contracts/Demeter.json");
     let demetraContract = hmy.contracts.createContract(demetraJson.abi, contractAddr);
 
@@ -32,16 +32,85 @@ async function lockToken(contractAddr, usdToken, amount) {
 
     let options = { gasPrice: 1000000000, gasLimit: 6721900, value: amount + ONE };
 
-    console.log("Lock Token address: " + usdToken + ' ' + amount);
+    console.log(`Lock Token ${usdToken} by ONE: ` + ' ' + amount);
 
     let response = await demetraContract.methods
         .lockToken(usdToken, amount + ONE)
         .send(options);
 
-    console.log("Lock Token status: " + response.status);
+    console.log(`Lock Token ${usdToken} by ONE: status ` + response.status);
 }
+
+async function lockTokenByGOV(contractAddr, usdToken, amount) {
+    const demetraJson = require("../build/contracts/Demeter.json");
+    let demetraContract = hmy.contracts.createContract(demetraJson.abi, contractAddr);
+
+    demetraContract.wallet.addByPrivateKey(process.env.USER_PRIVATE_KEY);
+
+    let options = { gasPrice: 1000000000, gasLimit: 6721900 };
+
+    console.log(`Lock Token ${usdToken} by GOV: ` + ' ' + amount);
+
+    let response = await demetraContract.methods
+        .lockToken(usdToken, amount + ONE)
+        .send(options);
+
+    console.log(`Lock Token ${usdToken} by GOV status: ` + ' ' + response.status);
+}
+
+async function unlockToken(contractAddr, usdToken, govToken, amount) {
+    const demetraJson = require("../build/contracts/Demeter.json");
+    let demetraContract = hmy.contracts.createContract(demetraJson.abi, contractAddr);
+
+    demetraContract.wallet.addByPrivateKey(process.env.USER_PRIVATE_KEY);
+
+    let options = { gasPrice: 1000000000, gasLimit: 6721900 };
+
+    console.log("unlockToken address: " + usdToken + ' ' + amount);
+
+    let response = await demetraContract.methods
+        .unlockToken(usdToken, govToken, amount + ONE)
+        .send(options);
+
+    console.log("unlockToken status: " + response.status);
+}
+
+async function getTokens(contractAddr, userAddress, amount) {
+    const demetraJson = require("../build/contracts/BaseToken.json");
+    let demetraContract = hmy.contracts.createContract(demetraJson.abi, contractAddr);
+
+    demetraContract.wallet.addByPrivateKey(process.env.MASTER_PRIVATE_KEY);
+
+    let options = { gasPrice: 1000000000, gasLimit: 6721900 };
+
+    console.log("Transfer Token to address: " + userAddress + ' ' + amount);
+
+    let response = await demetraContract.methods
+        .transfer(userAddress, amount + ONE)
+        .send(options);
+
+    console.log("Transfer Token status: " + response.status);
+}
+
+async function getExchangePrice(contractAddr, tokenAddress) {
+    const demetraJson = require("../build/contracts/Demeter.json");
+    let demetraContract = hmy.contracts.createContract(demetraJson.abi, contractAddr);
+
+    let options = { gasPrice: 1000000000, gasLimit: 6721900 };
+
+    let response = await demetraContract.methods
+        .getSynth(tokenAddress)
+        .call(options);
+
+    console.log("getExchangePrices: " + (response));
+}
+
 
 module.exports = {
     setExchangePrice,
-    lockToken
+    lockTokenByGOV,
+    lockTokenByOne,
+    getTokens,
+    getExchangePrice,
+    unlockToken
 }
