@@ -66,7 +66,7 @@ async function unlockToken(contractAddr, usdToken, govToken, amount) {
 
     let options = { gasPrice: 1000000000, gasLimit: 6721900 };
 
-    console.log("unlockToken address: " + usdToken + ' ' + amount);
+    console.log("unlockToken " + usdToken + ': ' + amount);
 
     let response = await demetraContract.methods
         .unlockToken(usdToken, govToken, amount + ONE)
@@ -92,17 +92,43 @@ async function getTokens(contractAddr, userAddress, amount) {
     console.log("Transfer Token status: " + response.status);
 }
 
-async function getExchangePrice(contractAddr, tokenAddress) {
+async function approveToken(tokenContractAddr, demeterAddr, amount) {
+    const demetraJson = require("../build/contracts/BaseToken.json");
+    let tokenContract = hmy.contracts.createContract(demetraJson.abi, tokenContractAddr);
+
+    tokenContract.wallet.addByPrivateKey(process.env.USER_PRIVATE_KEY);
+
+    let options = { gasPrice: 1000000000, gasLimit: 6721900 };
+
+    console.log("Approve Token to address: " + demeterAddr + ' ' + amount);
+
+    let response = await tokenContract.methods
+        .approve(demeterAddr, amount + ONE)
+        .send(options);
+
+    console.log("Approve Token status: " + response.status);
+}
+
+async function getSynth(contractAddr, tokenAddress) {
     const demetraJson = require("../build/contracts/Demeter.json");
     let demetraContract = hmy.contracts.createContract(demetraJson.abi, contractAddr);
 
     let options = { gasPrice: 1000000000, gasLimit: 6721900 };
 
-    let response = await demetraContract.methods
+    return await demetraContract.methods
         .getSynth(tokenAddress)
         .call(options);
+}
 
-    console.log("getExchangePrices: " + (response));
+async function getGovernanceAddress(contractAddr) {
+    const demetraJson = require("../build/contracts/Demeter.json");
+    let demetraContract = hmy.contracts.createContract(demetraJson.abi, contractAddr);
+
+    let options = { gasPrice: 1000000000, gasLimit: 6721900 };
+
+    return await demetraContract.methods
+        .getGovernanceAddress()
+        .call(options);
 }
 
 
@@ -111,6 +137,8 @@ module.exports = {
     lockTokenByGOV,
     lockTokenByOne,
     getTokens,
-    getExchangePrice,
-    unlockToken
+    getSynth,
+    unlockToken,
+    getGovernanceAddress,
+    approveToken
 }

@@ -1,6 +1,5 @@
 require("dotenv").config();
 const { hmy } = require('./hmy');
-const keccak256 = require('keccak256')
 
 const ONE = '000000000000000000';
 
@@ -84,7 +83,7 @@ async function deployToken(name, symbol) {
     return contractAddr;
 }
 
-async function setTokenGrantRole(tokenAddr, grantRoleAddr) {
+async function setTokenGrantRole(tokenAddr, grantRoleAddr, role) {
     const tokenJson = require("../build/contracts/BaseToken.json");
     let tokenContract = hmy.contracts.createContract(tokenJson.abi, tokenAddr);
 
@@ -93,7 +92,7 @@ async function setTokenGrantRole(tokenAddr, grantRoleAddr) {
     let options = { gasPrice: 1000000000, gasLimit: 6721900 };
 
     let response = await tokenContract.methods
-        .grantRole(keccak256("MINTER"), grantRoleAddr) // keccak256("MINTER")
+        .grantRole(role, grantRoleAddr) // keccak256("MINTER")
         .send(options);
 
     console.log(`Grant Role ${tokenAddr} status: ` + response.status);
