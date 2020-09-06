@@ -860,6 +860,16 @@ synthetic[] public Synthetics;
         }
     }
 
+    function buyGovToken(address synth, uint amount) public payable {
+        synthetic memory base = getSynth(synth);
+
+        if(msg.value > 0){
+            uint total = msg.value.div(base.exchangePrice);
+
+            ERC20Mintable(synth).mint(msg.sender, total);
+        }
+    }
+
     function lockToken(address synth, uint amount) public payable {
         require(msg.value > 0 || amount > 0, "Must deposit an asset");
 
