@@ -7,8 +7,8 @@ const {hmy} = require("./hmy");
 const sleep = (ms) => new Promise(res => setTimeout(res, ms))
 
 let govContractAddr = "";
-const usdContractAddr = "0xc45055e3bde147155f783c83d38ef51b292cce4a";
-const contractAddr = "0xb91db3d0b14f010dbe699fd510b625a18180bbbe"
+const usdContractAddr = "0xefe6800e41e4623f95956782c27dbabc1f13180a";
+const contractAddr = "0x931e561eecb14e17d964c3e062197726e153d57f"
 
 async function getBalances() {
     console.log('---BALANCES---')

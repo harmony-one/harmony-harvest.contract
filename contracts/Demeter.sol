@@ -786,6 +786,12 @@ struct order {
 
 synthetic[] public Synthetics;
 
+    mapping(address => uint256) lockedBalances;
+
+    function lockedTokensOf(address tokenOwner) public view returns (uint) {
+        return lockedBalances[tokenOwner];
+    }
+
     function initialize(address govToken) public {
         require(initialized == false, "Already initialized");
 
@@ -860,7 +866,7 @@ synthetic[] public Synthetics;
         }
     }
 
-    function buyGovToken(address synth, uint amount) public payable {
+    function buyTokenByOne(address synth, uint amount) public payable {
         synthetic memory base = getSynth(synth);
 
         if(msg.value > 0){
@@ -880,6 +886,8 @@ synthetic[] public Synthetics;
         } else {
             //Lock HRC20 Governance Token
             // ERC20(getGovernanceAddress()).transfer(address(this), amount);
+            lockedBalances[msg.sender] = lockedBalances[msg.sender] + amount;
+
             ERC20(getGovernanceAddress()).transferFrom(msg.sender, address(this), amount);
             issueSynths(synth, msg.sender, getCollateralizationTotal(getGovernanceAddress(), synth, amount));
             SynthIssued(msg.sender, synth, getCollateralizationTotal(getGovernanceAddress(), synth, msg.value));
@@ -927,6 +935,7 @@ synthetic[] public Synthetics;
                 msg.sender.transfer(returnValue);
             } else {
                 // require(returnBalance(returnAsset) < returnValue, "Not enough in contract");
+                lockedBalances[msg.sender] = lockedBalances[msg.sender] - returnValue;
                 burnSynths(asset, msg.sender, amount);
                 ERC20(returnAsset).transfer(msg.sender, returnValue);
             }
